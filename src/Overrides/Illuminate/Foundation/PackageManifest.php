@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace Cortex\Foundation\Overrides\Illuminate\Foundation;
 
-use Exception;
 use Illuminate\Support\Str;
+use Illuminate\Support\Collection;
 use Illuminate\Filesystem\Filesystem;
+use Rinvex\Composer\Services\ModuleManifest;
 use Illuminate\Foundation\PackageManifest as BasePackageManifest;
 
 class PackageManifest extends BasePackageManifest
 {
-
     /**
      * The modules manifest path.
      *
@@ -27,11 +27,19 @@ class PackageManifest extends BasePackageManifest
     public $modulesManifest;
 
     /**
+     * The installed packages.
+     *
+     * @var \Illuminate\Support\Collection
+     */
+    public $installedPackages = [];
+
+    /**
      * Create a new package manifest instance.
      *
-     * @param  \Illuminate\Filesystem\Filesystem  $files
-     * @param  string  $basePath
-     * @param  string  $manifestPath
+     * @param \Illuminate\Filesystem\Filesystem $files
+     * @param string                            $basePath
+     * @param string                            $manifestPath
+     *
      * @return void
      */
     public function __construct(Filesystem $files, $basePath, $manifestPath)
@@ -56,53 +64,19 @@ class PackageManifest extends BasePackageManifest
             return $this->manifest;
         }
 
-        if (! file_exists($this->manifestPath) || ! file_exists($this->modulesManifestPath)) {
+        if (! is_file($this->manifestPath) || ! is_file($this->modulesManifestPath)) {
             $this->build();
         }
 
-        return $this->manifest = file_exists($this->manifestPath) ?
+        return $this->manifest = is_file($this->manifestPath) ?
             $this->files->getRequire($this->manifestPath) : [];
-    }
-
-    /**
-     * Build the manifest and write it to disk.
-     *
-     * @return void
-     */
-    public function build()
-    {
-        $packages = [];
-
-        if ($this->files->exists($path = $this->vendorPath.'/composer/installed.json')) {
-            $installed = json_decode($this->files->get($path), true);
-
-            $packages = $installed['packages'] ?? $installed;
-        }
-
-        $ignoreAll = in_array('*', $ignore = $this->packagesToIgnore());
-
-        $list = collect($packages)->mapWithKeys(function ($package) {
-            return [$this->format($package['name']) => $package['extra']['laravel'] ?? []];
-        })->each(function ($configuration) use (&$ignore) {
-            $ignore = array_merge($ignore, $configuration['dont-discover'] ?? []);
-        })->reject(function ($configuration, $package) use ($ignore, $ignoreAll) {
-            return $ignoreAll || in_array($package, $ignore);
-        })->filter();
-
-        $callback = function ($configuration, $package) {
-            return $package === 'cortex/foundation';
-        };
-
-        $disabledModules = collect($this->getModulesManifest())->reject(fn ($attributes, $module) => $attributes['autoload'])->keys();
-
-        $this->write($list->filter($callback)->union($list->reject($callback))->except($disabledModules)->all());
     }
 
     /**
      * Write modules manifest.
      *
-     * @throws \Exception
      * @throws \Illuminate\Contracts\Filesystem\FileNotFoundException
+     * @throws \Exception
      *
      * @return array
      */
@@ -112,12 +86,61 @@ class PackageManifest extends BasePackageManifest
             return $this->modulesManifest;
         }
 
-        if (! file_exists($this->modulesManifestPath)) {
+        $this->modulesManifest = is_file($this->modulesManifestPath) ?
+            $this->files->getRequire($this->modulesManifestPath) : [];
+
+        if (! is_file($this->modulesManifestPath) || empty($this->modulesManifest)) {
             $this->writeModulesManifest();
         }
 
-        return $this->modulesManifest = file_exists($this->modulesManifestPath) ?
-            $this->files->getRequire($this->modulesManifestPath) : [];
+        return $this->modulesManifest;
+    }
+
+    /**
+     * Build the manifest and write it to disk.
+     *
+     * @throws \Exception
+     * @throws \Illuminate\Contracts\Filesystem\FileNotFoundException
+     *
+     * @return void
+     */
+    public function build()
+    {
+        $this->installedPackages = $this->getInstalledPackages();
+
+        $ignoreAll = in_array('*', $ignore = $this->packagesToIgnore());
+
+        $list = $this->installedPackages->mapWithKeys(function ($package) {
+            return [$this->format($package['name']) => $package['extra']['laravel'] ?? []];
+        })->each(function ($configuration) use (&$ignore) {
+            $ignore = array_merge($ignore, $configuration['dont-discover'] ?? []);
+        })->reject(function ($configuration, $package) use ($ignore, $ignoreAll) {
+            return $ignoreAll || in_array($package, $ignore);
+        })->filter()->partition(function ($item, $key) {
+            return Str::startsWith($key, config('app.provider_loading.priority_5'));
+        })->flatMap(function ($values) {
+            return $values;
+        })->partition(function ($item, $key) {
+            return Str::startsWith($key, config('app.provider_loading.priority_4'));
+        })->flatMap(function ($values) {
+            return $values;
+        })->partition(function ($item, $key) {
+            return Str::startsWith($key, config('app.provider_loading.priority_3'));
+        })->flatMap(function ($values) {
+            return $values;
+        })->partition(function ($item, $key) {
+            return Str::startsWith($key, config('app.provider_loading.priority_2'));
+        })->flatMap(function ($values) {
+            return $values;
+        })->partition(function ($item, $key) {
+            return Str::startsWith($key, config('app.provider_loading.priority_1'));
+        })->flatMap(function ($values) {
+            return $values;
+        });
+
+        $disabledModules = collect($this->getModulesManifest())->reject(fn ($attributes, $module) => $attributes['autoload'])->keys();
+
+        $this->write($list->except($disabledModules)->all());
     }
 
     /**
@@ -129,22 +152,63 @@ class PackageManifest extends BasePackageManifest
      */
     protected function writeModulesManifest(): void
     {
-        $modulePaths = $this->files->glob(app()->path('*/*'), GLOB_ONLYDIR);
+        $paths = $this->getModulePaths();
+        $modulePath = app()->path().DIRECTORY_SEPARATOR;
 
-        $modulesManifest = collect($modulePaths)->flatMap(function ($path) {
-            $module = Str::after($path, app()->path().DIRECTORY_SEPARATOR);
-            return [$module => [
-                'active' => in_array($module, ['cortex/foundation', 'cortex/auth']) ? true : false,
-                'autoload' => in_array($module, ['cortex/foundation', 'cortex/auth']) ? true : false,
-            ]];
-        })->toArray();
+        $moduleManifest = new ModuleManifest($this->modulesManifestPath);
 
-        if (! is_writable($dirname = dirname($this->modulesManifestPath))) {
-            throw new Exception("The {$dirname} directory must be present and writable.");
+        collect($paths)->flatMap(function ($path) use ($modulePath, $moduleManifest) {
+            $module = Str::after($path, $modulePath);
+
+            if ($installed = $this->installedPackages->firstWhere('name', $module)) {
+                $moduleManifest->add($module, [
+                    'active' => in_array($module, config('rinvex.composer.always_active')) ? true : false,
+                    'autoload' => in_array($module, config('rinvex.composer.always_active')) ? true : false,
+                    'version' => $installed['version'],
+                ]);
+            }
+        });
+
+        $moduleManifest->persist();
+    }
+
+    /**
+     * Get module paths.
+     *
+     * @return array
+     */
+    public function getModulePaths(): array
+    {
+        return $this->files->glob(app()->path('*/*'), GLOB_ONLYDIR);
+    }
+
+    /**
+     * Get modules.
+     *
+     * @return \Illuminate\Support\Collection
+     */
+    public function getModules(): Collection
+    {
+        $modulePath = app()->path().DIRECTORY_SEPARATOR;
+
+        return collect($this->getModulePaths())->map(function ($path) use ($modulePath) {
+            return Str::after($path, $modulePath);
+        });
+    }
+
+    /**
+     * Get installed composer packages.
+     *
+     * @throws \Illuminate\Contracts\Filesystem\FileNotFoundException
+     *
+     * @return \Illuminate\Support\Collection
+     */
+    public function getInstalledPackages(): Collection
+    {
+        if ($this->files->exists($path = $this->vendorPath.'/composer/installed.json')) {
+            $packages = json_decode($this->files->get($path), true);
         }
 
-        $this->files->replace(
-            $this->modulesManifestPath, '<?php return '.var_export($modulesManifest, true).';'
-        );
+        return collect($packages['packages'] ?? $packages ?? []);
     }
 }

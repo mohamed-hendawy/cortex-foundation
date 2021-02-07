@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-use DaveJamesMiller\Breadcrumbs\Facades\Breadcrumbs;
-use DaveJamesMiller\Breadcrumbs\BreadcrumbsGenerator;
+use Diglactic\Breadcrumbs\Generator;
+use Diglactic\Breadcrumbs\Breadcrumbs;
 
-Breadcrumbs::register('frontarea.home', function (BreadcrumbsGenerator $breadcrumbs) {
+Breadcrumbs::register('frontarea.home', function (Generator $breadcrumbs) {
     $breadcrumbs->push('<i class="fa fa-home"></i> '.config('app.name'), route('frontarea.home'));
 });

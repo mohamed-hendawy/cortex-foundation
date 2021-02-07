@@ -6,9 +6,9 @@ namespace Cortex\Foundation\Http\Middleware;
 
 use Closure;
 use Illuminate\Support\ViewErrorBag;
-use Krucas\Notification\Middleware\NotificationMiddleware as Middleware;
+use Krucas\Notification\Middleware\NotificationMiddleware as BaseNotificationMiddleware;
 
-class NotificationMiddleware extends Middleware
+class NotificationMiddleware extends BaseNotificationMiddleware
 {
     /**
      * Handle an incoming request.
@@ -26,7 +26,7 @@ class NotificationMiddleware extends Middleware
             foreach ($containers as $name => $messages) {
                 /** @var \Krucas\Notification\Message $message */
                 foreach ($messages as $message) {
-                    $this->notification->container($name)->add($message->getType(), $message, false);
+                    $this->notification->container($name)->add($message->getType(), strip_tags($message), false);
                 }
             }
         }
@@ -41,7 +41,7 @@ class NotificationMiddleware extends Middleware
                     }
                 }
 
-                $this->notification->container(null)->add($type, $message, false);
+                $this->notification->container(null)->add($type, strip_tags($message), false);
             }
         }
 

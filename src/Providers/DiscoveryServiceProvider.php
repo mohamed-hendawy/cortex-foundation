@@ -48,7 +48,7 @@ class DiscoveryServiceProvider extends ServiceProvider
     {
         // Register modules list
         $modulesManifestPath = $this->app->getCachedModulesPath();
-        $modulesManifest = file_exists($modulesManifestPath) ? $this->app['files']->getRequire($modulesManifestPath) : [];
+        $modulesManifest = is_file($modulesManifestPath) ? $this->app['files']->getRequire($modulesManifestPath) : [];
         $this->enabledModules = collect($modulesManifest)->filter(fn ($attributes) => $attributes['active'] && $attributes['autoload'])->keys()->toArray();
         $this->app->singleton('request.modules', fn () => $modulesManifest);
 
@@ -212,7 +212,7 @@ class DiscoveryServiceProvider extends ServiceProvider
                         $this->publishesViews($module, true);
                         break;
                     case 'database/migrations':
-                        $this->autoloadMigrations($module) ?: $this->loadMigrationsFrom($dir);
+                        ! $this->autoloadMigrations($module) || $this->loadMigrationsFrom($dir);
                         $this->publishesMigrations($module, true);
                         break;
                 }
@@ -236,9 +236,10 @@ class DiscoveryServiceProvider extends ServiceProvider
                 return ! is_file($file);
             })
             ->each(function ($file) {
-                $module = str_replace([$this->app->basePath('app/'), '/config/config.php', '/'], ['', '', '.'], $file);
+                $module = str_replace([$this->app->basePath('app/'), '/config/config.php'], '', $file);
 
-                $this->mergeConfigFrom($file, $module);
+                $this->mergeConfigFrom($file, str_replace('/', '.', $module));
+
                 $this->publishesConfig($module, true);
             }, []);
     }

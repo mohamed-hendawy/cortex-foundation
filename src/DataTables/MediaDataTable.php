@@ -9,9 +9,9 @@ use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
 /**
  * @property \Spatie\MediaLibrary\HasMedia $resource
- * @property string                                 $tabs
- * @property string                                 $id
- * @property string                                 $url
+ * @property string                        $tabs
+ * @property string                        $id
+ * @property string                        $url
  */
 class MediaDataTable extends AbstractDataTable
 {
@@ -40,6 +40,7 @@ class MediaDataTable extends AbstractDataTable
         'bulkDelete' => true,
         'bulkActivate' => false,
         'bulkDeactivate' => false,
+        'bulkRevoke' => false,
 
         'colvis' => true,
         'pageLength' => true,
@@ -70,19 +71,7 @@ class MediaDataTable extends AbstractDataTable
     {
         $query = $this->resource->media();
 
-        return $this->applyScopes($query);
-    }
-
-    /**
-     * Display ajax response.
-     *
-     * @return \Illuminate\Http\JsonResponse
-     */
-    public function ajax()
-    {
-        return datatables($this->query())
-            ->setTransformer(app($this->transformer))
-            ->make(true);
+        return $this->scope()->applyScopes($query);
     }
 
     /**

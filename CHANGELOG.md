@@ -5,6 +5,116 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](CONTRIBUTING.md).
 
 
+## [v6.0.14] - 2021-02-06
+- Simplify service provider model registration into IoC
+- handle CountryLoaderException and UniversityLoaderException (#206)
+- Refactor stubs for resource generation and make commands
+- Add missing ObserverMake command
+- Tweak authorization layer to support configurable model name (resource) to fix model override issues, and always bind to runtime model, instead of hardcoding
+- Add missing phpdoc
+- Add missing ObserverMake command
+- Move ide-helper generation to artisan command to conditionally run on dev environments only (when dev-package is installed)
+- Pass 'module' command option when calling sub-commands
+- Fix make command namespaces & paths for different entities
+- Conditionally register Debug bar service provider on dev environments
+- Skip publishing module resources unless explicitly specified, for simplicity
+
+## [v6.0.13] - 2021-01-16
+- Fix module migration autoloader issue
+
+## [v6.0.12] - 2021-01-15
+- Add model replication feature
+- Upgrade medialibrary db to v9
+
+## [v6.0.11] - 2021-01-02
+- Fix XSS security issue with redirect messages
+
+## [v6.0.10] - 2021-01-02
+- Move cortex:autoload & cortex:activate commands to cortex/foundation module responsibility
+
+## [v6.0.9] - 2021-01-02
+- Move cortex:autoload & cortex:activate commands to cortex/foundation module responsibility
+
+## [v6.0.8] - 2021-01-02
+- Refactor Package and Module manifest classes and commands
+
+## [v6.0.7] - 2021-01-01
+- Move cortex:autoload & cortex:activate commands to cortex/foundation module responsibility
+  - This is because :autoload & :activate commands are registered only if the module already autoloaded, so there is no way we can execute commands of unloaded modules
+  - cortex/foundation module is always autoloaded, so it's the logical and reasonable place to register these :autoload & :activate module commands and control other modules from outside
+
+## [v6.0.6] - 2021-01-01
+- Run self diagnosis before installation
+- Generate application key, and link storage directory before installation
+- Publish assets only if explicitly required, otherwise skip for clean installation
+- Override artisan StorageLinkCommand to change alert level from error to warn
+- Add 'force' option to core autoload & activate artisan command calls
+
+## [v6.0.5] - 2021-01-01
+- Run self diagnosis before installation
+- Generate application key, and link storage directory before installation
+- Publish assets only if explicitly required, otherwise skip for clean installation
+- Override artisan StorageLinkCommand to change alert level from error to warn
+- Add 'force' option to core autoload & activate artisan command calls
+
+## [v6.0.5] - 2020-12-31
+- Skip modules that are not installed via composer
+- Rename seeders directory
+- Fix debugbar config file path
+- Update Clockwork middleware
+- Rename core_modules to always_active
+- Refactor service provider loading priorities
+- Add core activate, deactivate, autoload, unload artisan commands
+- Utilize rinvex.composer.always_active config option
+- Fix Google font API links
+- Override DataTable Builder generateScripts to drop using sprintf - sprintf used to cause issues when using % symbols in attributes
+
+## [v6.0.4] - 2020-12-27
+- Tweak and optimize module and custom composer installer
+
+## [v6.0.3] - 2020-12-25
+- Fix wrong composer dependency version constraints
+
+## [v6.0.2] - 2020-12-25
+- Switch outdated composer dependencies to temporary compatible forks until it's updated
+
+## [v6.0.1] - 2020-12-25
+- Add support for PHP v8
+
+## [v6.0.0] - 2020-12-22
+- Upgrade to Laravel v8
+
+## [v5.1.14] - 2020-12-16
+- Fix merge config in auto discovery
+
+## [v5.1.13] - 2020-12-14
+- Fix module config files auto discovery
+
+## [v5.1.12] - 2020-12-12
+- Fix OpcacheServiceProvider config file include, and drop route registration
+
+## [v5.1.11] - 2020-12-11
+- Add stateSave, responsive, scrollX options to datatables and fix some datatable options
+- Import AdminLTE base styles in frontarea theme to inherit needed styles
+- Cast $user->getAuthIdentifier() to string to avoid sha1 datatype issues
+- Override datatables HTML builder, template method and add pusher support
+- Override DebugbarServiceProvider & OpcacheServiceProvider
+- Rename routes, channels, menus, breadcrumbs, datatable & form IDs to follow same modular naming conventions
+- Tweak and simplify datatables method call and realtime
+- Refactor and tweak Eloquent Events
+- Ad support for query scopes
+- Move EloquentDataTable class to correct overrides namespace
+- Refactor and simplify datatables bulk actions
+- Add support for datatables bulkRevoke
+- Enforce consistent datatables request object usage
+- Move datatables options and buttons to config files and support class based override as well
+- Refactor frontarea datatables views and add missing partial
+- Automatically add query scopes to datatables if exists
+- Enforce consistent database table index definition
+- Add support for bulkRevoke
+- Drop useless datatables ajax method override
+- Reset default custom order column: 'name' in ajax method
+
 ## [v5.1.10] - 2020-10-05
 - Setup Bouncer users model on route matched event
 - Whitelist enabled modules instead of blacklisting disabled modules
@@ -299,6 +409,25 @@ This project adheres to [Semantic Versioning](CONTRIBUTING.md).
 ## v0.0.1 - 2017-03-14
 - Tag first release
 
+[v6.0.14]: https://github.com/rinvex/cortex-foundation/compare/v6.0.13...v6.0.14
+[v6.0.13]: https://github.com/rinvex/cortex-foundation/compare/v6.0.12...v6.0.13
+[v6.0.12]: https://github.com/rinvex/cortex-foundation/compare/v6.0.11...v6.0.12
+[v6.0.11]: https://github.com/rinvex/cortex-foundation/compare/v6.0.10...v6.0.11
+[v6.0.10]: https://github.com/rinvex/cortex-foundation/compare/v6.0.9...v6.0.10
+[v6.0.9]: https://github.com/rinvex/cortex-foundation/compare/v6.0.8...v6.0.9
+[v6.0.8]: https://github.com/rinvex/cortex-foundation/compare/v6.0.7...v6.0.8
+[v6.0.7]: https://github.com/rinvex/cortex-foundation/compare/v6.0.6...v6.0.7
+[v6.0.6]: https://github.com/rinvex/cortex-foundation/compare/v6.0.5...v6.0.6
+[v6.0.5]: https://github.com/rinvex/cortex-foundation/compare/v6.0.4...v6.0.5
+[v6.0.4]: https://github.com/rinvex/cortex-foundation/compare/v6.0.3...v6.0.4
+[v6.0.3]: https://github.com/rinvex/cortex-foundation/compare/v6.0.2...v6.0.3
+[v6.0.2]: https://github.com/rinvex/cortex-foundation/compare/v6.0.1...v6.0.2
+[v6.0.1]: https://github.com/rinvex/cortex-foundation/compare/v6.0.0...v6.0.1
+[v6.0.0]: https://github.com/rinvex/cortex-foundation/compare/v5.1.14...v6.0.0
+[v5.1.14]: https://github.com/rinvex/cortex-foundation/compare/v5.1.13...v5.1.14
+[v5.1.13]: https://github.com/rinvex/cortex-foundation/compare/v5.1.12...v5.1.13
+[v5.1.12]: https://github.com/rinvex/cortex-foundation/compare/v5.1.11...v5.1.12
+[v5.1.11]: https://github.com/rinvex/cortex-foundation/compare/v5.1.10...v5.1.11
 [v5.1.10]: https://github.com/rinvex/cortex-foundation/compare/v5.1.9...v5.1.10
 [v5.1.9]: https://github.com/rinvex/cortex-foundation/compare/v5.1.8...v5.1.9
 [v5.1.8]: https://github.com/rinvex/cortex-foundation/compare/v5.1.7...v5.1.8

@@ -23,7 +23,9 @@ use Cortex\Foundation\Console\Commands\ChannelMakeCommand;
 use Cortex\Foundation\Console\Commands\ConsoleMakeCommand;
 use Cortex\Foundation\Console\Commands\FactoryMakeCommand;
 use Cortex\Foundation\Console\Commands\RequestMakeCommand;
+use Cortex\Foundation\Console\Commands\StorageLinkCommand;
 use Cortex\Foundation\Console\Commands\ListenerMakeCommand;
+use Cortex\Foundation\Console\Commands\ObserverMakeCommand;
 use Cortex\Foundation\Console\Commands\ProviderMakeCommand;
 use Cortex\Foundation\Console\Commands\ResourceMakeCommand;
 use Cortex\Foundation\Console\Commands\DataTableMakeCommand;
@@ -225,7 +227,7 @@ class ArtisanServiceProvider extends BaseArtisanServiceProvider
     protected function registerEventCacheCommand()
     {
         $this->app->singleton('command.event.cache', function () {
-            return new EventCacheCommand;
+            return new EventCacheCommand();
         });
     }
 
@@ -390,6 +392,18 @@ class ArtisanServiceProvider extends BaseArtisanServiceProvider
      *
      * @return void
      */
+    protected function registerObserverMakeCommand(): void
+    {
+        $this->app->singleton('command.observer.make', function ($app) {
+            return new ObserverMakeCommand($app['files']);
+        });
+    }
+
+    /**
+     * Register the command.
+     *
+     * @return void
+     */
     protected function registerPolicyMakeCommand(): void
     {
         $this->app->singleton('command.policy.make', function ($app) {
@@ -454,6 +468,18 @@ class ArtisanServiceProvider extends BaseArtisanServiceProvider
     {
         $this->app->singleton('command.seeder.make', function ($app) {
             return new SeederMakeCommand($app['files'], $app['composer']);
+        });
+    }
+
+    /**
+     * Register the command.
+     *
+     * @return void
+     */
+    protected function registerStorageLinkCommand()
+    {
+        $this->app->singleton('command.storage.link', function () {
+            return new StorageLinkCommand();
         });
     }
 

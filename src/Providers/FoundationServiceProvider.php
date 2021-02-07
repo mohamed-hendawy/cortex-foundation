@@ -6,6 +6,7 @@ namespace Cortex\Foundation\Providers;
 
 use Illuminate\Routing\Router;
 use Illuminate\Support\Collection;
+use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\ServiceProvider;
 use Rinvex\Support\Traits\ConsoleTools;
@@ -18,24 +19,26 @@ use Cortex\Foundation\Http\Middleware\Clockwork;
 use Cortex\Foundation\Generators\LangJsGenerator;
 use Cortex\Foundation\Console\Commands\SeedCommand;
 use Illuminate\Database\Eloquent\Relations\Relation;
-use Cortex\Foundation\Console\Commands\UnloadCommand;
 use Cortex\Foundation\Console\Commands\InstallCommand;
 use Cortex\Foundation\Console\Commands\MigrateCommand;
 use Cortex\Foundation\Console\Commands\PublishCommand;
-use Cortex\Foundation\Console\Commands\ActivateCommand;
-use Cortex\Foundation\Console\Commands\AutoloadCommand;
 use Cortex\Foundation\Console\Commands\CoreSeedCommand;
 use Cortex\Foundation\Console\Commands\RollbackCommand;
 use Illuminate\Support\Facades\Session as SessionFacade;
-use Cortex\Foundation\Console\Commands\DeactivateCommand;
+use Cortex\Foundation\Console\Commands\CoreUnloadCommand;
 use Cortex\Foundation\Verifiers\EloquentPresenceVerifier;
 use Cortex\Foundation\Console\Commands\CoreInstallCommand;
 use Cortex\Foundation\Console\Commands\CoreMigrateCommand;
 use Cortex\Foundation\Console\Commands\CorePublishCommand;
+use Cortex\Foundation\Console\Commands\ExecuteDumpCommand;
+use Cortex\Foundation\Console\Commands\CoreActivateCommand;
+use Cortex\Foundation\Console\Commands\CoreAutoloadCommand;
 use Cortex\Foundation\Console\Commands\CoreRollbackCommand;
+use Cortex\Foundation\Console\Commands\CoreDeactivateCommand;
 use Cortex\Foundation\Http\Middleware\NotificationMiddleware;
 use Cortex\Foundation\Overrides\Illuminate\Routing\Redirector;
 use Cortex\Foundation\Overrides\Illuminate\Routing\UrlGenerator;
+use Cortex\Foundation\Overrides\Barryvdh\Debugbar\DebugbarServiceProvider;
 use Cortex\Foundation\Overrides\Mcamara\LaravelLocalization\LaravelLocalization;
 use Cortex\Foundation\Overrides\Mariuzzo\LaravelJsLocalization\Commands\LangJsCommand;
 
@@ -49,11 +52,8 @@ class FoundationServiceProvider extends ServiceProvider
      * @var array
      */
     protected $commands = [
-        ActivateCommand::class => 'command.cortex.foundation.activate',
-        DeactivateCommand::class => 'command.cortex.foundation.deactivate',
-        AutoloadCommand::class => 'command.cortex.foundation.autoload',
-        UnloadCommand::class => 'command.cortex.foundation.unload',
         SeedCommand::class => 'command.cortex.foundation.seed',
+        ExecuteDumpCommand::class => 'command.cortex.execute.dump',
         InstallCommand::class => 'command.cortex.foundation.install',
         MigrateCommand::class => 'command.cortex.foundation.migrate',
         PublishCommand::class => 'command.cortex.foundation.publish',
@@ -63,6 +63,10 @@ class FoundationServiceProvider extends ServiceProvider
         CoreMigrateCommand::class => 'command.cortex.foundation.coremigrate',
         CorePublishCommand::class => 'command.cortex.foundation.corempublish',
         CoreRollbackCommand::class => 'command.cortex.foundation.corerollback',
+        CoreActivateCommand::class => 'command.cortex.foundation.coreactivate',
+        CoreAutoloadCommand::class => 'command.cortex.foundation.coreautoload',
+        CoreDeactivateCommand::class => 'command.cortex.foundation.coredeactivate',
+        CoreUnloadCommand::class => 'command.cortex.foundation.coreunload',
     ];
 
     /**
@@ -86,14 +90,18 @@ class FoundationServiceProvider extends ServiceProvider
         $this->overrideLangJS();
 
         // Bind eloquent models to IoC container
-        $this->app->singleton('cortex.foundation.import_record', $importerModel = $this->app['config']['cortex.foundation.models.import_record']);
-        $importerModel === ImportRecord::class || $this->app->alias('cortex.foundation.import_record', ImportRecord::class);
+        $this->registerModels([
+            'cortex.foundation.import_record' => ImportRecord::class,
+        ]);
 
         // Override datatables html builder
         $this->app->bind(\Yajra\DataTables\Html\Builder::class, \Cortex\Foundation\Overrides\Yajra\DataTables\Html\Builder::class);
 
         // Register console commands
         $this->registerCommands($this->commands);
+
+        // Register dev service providers
+        $this->app->environment('production') || $this->app->register(DebugbarServiceProvider::class);
     }
 
     /**
@@ -105,6 +113,9 @@ class FoundationServiceProvider extends ServiceProvider
     {
         // Fix the specified key was too long error
         Schema::defaultStringLength(191);
+
+        // Use Pagination bootstrap styles
+        Paginator::useBootstrap();
 
         // Override presence verifier
         $this->app['validator']->setPresenceVerifier($this->app['cortex.foundation.presence.verifier']);
